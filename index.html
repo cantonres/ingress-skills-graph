@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Ingress hex skills graph generator. Supports pasted agent stats or fully custom axes, with transparent high-resolution PNG export.">
+<title>Ingress Skills Graph</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2210%22%20fill%3D%22%230e141c%22%2F%3E%3Cpath%20d%3D%22M32%206%2053%2018v28L32%2058%2011%2046V18Z%22%20fill%3D%22none%22%20stroke%3D%22%2300aeef%22%20stroke-width%3D%225%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpath%20d%3D%22M32%2020%2042%2026v12L32%2044%2022%2038V26Z%22%20fill%3D%22%2300aeef%22%20fill-opacity%3D%22.18%22%2F%3E%3C%2Fsvg%3E">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-hex" aria-hidden="true">⬡</span>
+      <div class="brand-text">
+        <strong>Ingress Skills Graph</strong>
+        <span data-i18n="brand.sub">六边形技能图生成器</span>
+      </div>
+    </div>
+
+    <div class="agent-strip" aria-label="Agent status">
+      <div class="agent-cell">
+        <span class="agent-label" data-i18n="hud.agent">AGENT</span>
+        <span class="agent-value" id="hud-agent">—</span>
+      </div>
+      <div class="agent-cell">
+        <span class="agent-label" data-i18n="hud.level">LEVEL</span>
+        <span class="agent-value" id="hud-level">—</span>
+      </div>
+      <div class="agent-cell">
+        <span class="agent-label" data-i18n="hud.ap">LIFETIME AP</span>
+        <span class="agent-value" id="hud-ap">—</span>
+      </div>
+      <div class="agent-cell agent-cell-faction">
+        <span class="agent-label" data-i18n="hud.faction">FACTION</span>
+        <span class="agent-value"><img class="hud-sigil" id="hud-sigil" alt="" aria-hidden="true"><span id="hud-faction">—</span></span>
+      </div>
+    </div>
+
+    <div class="top-actions">
+      <div class="seg" role="group" data-i18n-aria="aria.faction" aria-label="阵营配色">
+        <button type="button" class="seg-btn active" id="faction-resistance">
+          <i class="dot dot-blue"></i> Resistance
+        </button>
+        <button type="button" class="seg-btn" id="faction-enlightened">
+          <i class="dot dot-green"></i> Enlightened
+        </button>
+      </div>
+      <button type="button" class="icon-btn lang-btn" id="lang-toggle" title="Switch language">EN</button>
+      <button type="button" class="icon-btn" id="theme-toggle" title="切换明暗主题" data-i18n-aria="aria.theme" aria-label="切换明暗主题">
+        <span id="theme-icon">☾</span>
+      </button>
+      <a class="icon-btn" id="github-link" href="#" target="_blank" rel="noopener" data-i18n-aria="top.github" aria-label="GitHub" title="GitHub">
+        <svg class="gh-icon" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+      </a>
+      <button type="button" class="icon-btn" id="about-btn" aria-haspopup="dialog" aria-expanded="false" data-i18n-aria="top.about" aria-label="声明" title="声明">&#9432;</button>
+    </div>
+
+    <div class="about-popover hidden" id="about-popover" role="dialog" aria-modal="false" data-i18n-aria="top.aboutTitle" aria-label="关于本站">
+      <div class="about-head">
+        <strong data-i18n="top.aboutTitle">关于本站</strong>
+        <button type="button" class="about-close" id="about-close" data-i18n-aria="top.close" aria-label="关闭">×</button>
+      </div>
+      <p class="about-lead" data-i18n="footer.1">支持 Ingress 数据与自定义能力，导出高清透明图</p>
+      <p class="about-source" data-i18n-html="footer.2">数据源：粘贴的 Agent 数据、自定义输入</p>
+      <p class="about-disc" data-i18n="top.disclaimer">本站为爱好者制作的非官方工具，与 Niantic 及 Ingress 官方无关联；Ingress 是 Niantic 的注册商标。</p>
+      <h4 class="about-sub" data-i18n="top.changelog">更新记录</h4>
+      <ol class="changelog">
+        <li data-i18n="log.1"><time>2026-11-23</time>顶栏新增 GitHub 与声明弹窗，页脚信息移入弹窗</li>
+        <li data-i18n="log.2"><time>2026-11-23</time>采用真实 Ingress 阵营徽标与战术终端视觉</li>
+        <li data-i18n="log.3"><time>2026-11-23</time>六边形内可叠加徽标，支持大小、透明度、配色</li>
+        <li data-i18n="log.4"><time>2026-11-23</time>方案按 Ingress / 自定义 / 纯样式分类保存</li>
+        <li data-i18n="log.5"><time>2026-11-23</time>自定义能力名支持多行能力描述</li>
+        <li data-i18n="log.6"><time>2026-11-23</time>加入明暗主题与手机端触控适配</li>
+      </ol>
+      <a class="about-gh" id="about-github" href="#" target="_blank" rel="noopener">
+        <svg class="gh-icon" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+        <span data-i18n="top.viewGithub">在 GitHub 上查看本项目</span>
+      </a>
+    </div>
+  </header>
+
+  <main class="layout">
+
+    <!-- 左侧：数据与配置 -->
+    <section class="panel controls" data-i18n-aria="aria.config" aria-label="数据与配置">
+
+      <div class="mode-tabs" role="tablist">
+        <button type="button" class="mode-tab active" id="tab-ingress" data-mode="ingress" role="tab" data-i18n="tab.ingress">Ingress 数据</button>
+        <button type="button" class="mode-tab" id="tab-custom" data-mode="custom" role="tab" data-i18n="tab.custom">自定义能力</button>
+      </div>
+
+      <!-- Ingress 模式 -->
+      <div class="mode-pane" id="pane-ingress">
+
+        <div class="field">
+          <label for="raw-data"><span data-i18n="field.paste">粘贴 Agent 数据</span> <span class="hint" data-i18n="hint.paste">表头 + 数值两行，或逐行「字段 数值」</span></label>
+          <textarea id="raw-data" spellcheck="false" data-i18n-ph="ph.paste" placeholder="Time Span&#9;Agent Name&#9;Agent Faction&#9;...&#10;ALL TIME&#9;XXXX&#9;Resistance&#9;..."></textarea>
+          <div class="btn-row">
+            <button type="button" class="btn btn-primary" id="btn-parse" data-i18n="btn.parse">解析数据</button>
+            <button type="button" class="btn" id="btn-sample" data-i18n="btn.sample">填入示例</button>
+            <span class="status" id="parse-status" role="status"></span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label><span data-i18n="field.baseline">基准策略</span> <span class="hint" data-i18n="hint.baseline">决定每根轴的 100% 线</span></label>
+          <div class="inline-fields">
+            <select id="baseline-mode" data-i18n-aria="aria.baselineMode" aria-label="基准策略">
+              <option value="prominence" data-i18n="opt.prominence">单人相对刻度（推荐）</option>
+              <option value="medal" data-i18n="opt.medal">公开勋章等级</option>
+            </select>
+            <select id="medal-tier" disabled data-i18n-aria="aria.medalTier" aria-label="勋章等级">
+              <option value="0" data-i18n="opt.bronze">铜 Bronze</option>
+              <option value="1" data-i18n="opt.silver">银 Silver</option>
+              <option value="2" selected data-i18n="opt.gold">金 Gold</option>
+              <option value="3" data-i18n="opt.platinum">铂 Platinum</option>
+              <option value="4" data-i18n="opt.onyx">玛瑙 Onyx</option>
+            </select>
+          </div>
+          <p class="note" id="baseline-note"></p>
+        </div>
+
+        <div class="field">
+          <div class="field-head">
+            <label data-i18n="field.axes">六维轴与基准</label>
+          </div>
+          <button type="button" class="btn btn-primary btn-autopick" id="btn-autopick" data-i18n="btn.autopick">自动挑突出项</button>
+          <div class="axis-head" aria-hidden="true">
+            <span data-i18n="axis.head.field">指标 · 基准%</span>
+            <span data-i18n="axis.head.value">数值</span>
+            <span data-i18n="axis.head.base">基准</span>
+            <span data-i18n="axis.head.norm">归一%</span>
+          </div>
+          <div class="axis-editor" id="axis-editor-ingress"></div>
+          <p class="note" id="norm-note" data-i18n="note.norm">Ingress 图按最强项归一化为 100%，只表达相对强弱；自定义图按真实数值绘制，允许突破外圈。</p>
+        </div>
+
+        <div class="field">
+          <label for="chart-title" data-i18n="field.chartTitle">图内标题</label>
+          <input type="text" id="chart-title" data-i18n-ph="ph.chartTitle" placeholder="留空则使用 Agent Name">
+        </div>
+
+      </div>
+
+      <!-- 自定义模式 -->
+      <div class="mode-pane hidden" id="pane-custom">
+        <p class="note" data-i18n="note.custom">直接填写能力名与数值。每行的「满值」即 100% 基准，超过即爆表。</p>
+        <div class="axis-editor custom-editor" id="axis-editor-custom"></div>
+        <div class="field">
+          <label for="custom-title" data-i18n="field.chartTitle">图内标题</label>
+          <input type="text" id="custom-title" value="My Skills" data-i18n-ph="ph.customTitle" placeholder="例如：My Skills">
+        </div>
+      </div>
+
+      <div class="preset-panel">
+        <button type="button" class="btn btn-primary" id="btn-save" data-i18n="preset.save">保存当前方案</button>
+        <div class="preset-row">
+          <input type="text" id="preset-name" data-i18n-ph="preset.namePh" placeholder="方案名称">
+          <select id="preset-select" aria-label="已保存方案"></select>
+          <button type="button" class="btn" id="btn-load" data-i18n="preset.load">载入</button>
+          <button type="button" class="btn" id="btn-delete-preset" data-i18n="preset.delete">删除</button>
+        </div>
+      </div>
+
+      <details class="help">
+        <summary data-i18n="help.summary">数据格式说明</summary>
+        <ul>
+          <li data-i18n="help.1">支持制表符、逗号、多空格或单空格分隔；单空格模式按已知字段名自动切分，自动识别千位分隔符。</li>
+          <li data-i18n="help.2">也支持逐行「字段名&lt;TAB&gt;数值」，或 JSON 对象。</li>
+          <li data-i18n-html="help.3">字段名大小写、空格、括号会被忽略，例如 <code>Lifetime AP</code> = <code>lifetime_ap</code>。</li>
+          <li data-i18n="help.4">自动挑项使用单人数据的对数 z-score，并限制每个类别最多 2 项。</li>
+        </ul>
+      </details>
+
+    </section>
+
+    <!-- 右侧：预览与导出 -->
+    <section class="panel preview" data-i18n-aria="aria.preview" aria-label="图表预览">
+      <div class="preview-head">
+        <div>
+          <h2 data-i18n="preview.title">预览</h2>
+          <p class="sub" id="preview-sub" data-i18n="preview.sub">白底纸张预览，导出效果与预览一致 · PNG 背景透明</p>
+        </div>
+      </div>
+
+      <div class="scope" aria-hidden="false">
+        <div class="scope-head">
+          <span class="scope-tag" data-i18n="scope.tag">扫描台 / skill matrix</span>
+          <span class="scope-readout" id="scope-readout">—</span>
+        </div>
+        <div class="scope-stage">
+          <span class="scope-corner tl" aria-hidden="true"></span>
+          <span class="scope-corner tr" aria-hidden="true"></span>
+          <span class="scope-corner bl" aria-hidden="true"></span>
+          <span class="scope-corner br" aria-hidden="true"></span>
+          <span class="scope-scan" aria-hidden="true"></span>
+          <div class="canvas-wrap" id="canvas-wrap">
+            <canvas id="chart" width="900" height="900" role="img" data-i18n-aria="aria.chart" aria-label="六边形技能图预览"></canvas>
+          </div>
+        </div>
+        <div class="scope-foot">
+          <span class="scope-legend"><i class="dot" id="legend-dot"></i><span id="legend-text">Resistance</span></span>
+          <span class="scope-note" data-i18n="scope.note">预览外壳为装饰，不写入导出图</span>
+        </div>
+      </div>
+
+      <div class="export-bar">
+        <label for="export-scale" data-i18n="export.scale">导出倍率</label>
+        <select id="export-scale">
+          <option value="2">2× (1800 px)</option>
+          <option value="3" selected>3× (2700 px)</option>
+          <option value="4">4× (3600 px)</option>
+        </select>
+        <button type="button" class="btn btn-primary" id="btn-export" data-i18n="btn.export">导出透明 PNG</button>
+      </div>
+      <p class="note" id="export-status" role="status"></p>
+
+      <details class="style-panel" id="style-panel">
+        <summary data-i18n="style.title">样式 DIY</summary>
+        <div class="style-save-row">
+          <input type="text" id="style-preset-name" data-i18n-ph="preset.namePh" placeholder="方案名称">
+          <button type="button" class="btn btn-primary" id="style-save" data-i18n="preset.save">保存当前方案</button>
+        </div>
+        <div class="style-body">
+
+          <div class="style-group">
+            <h3 data-i18n="style.background">背景</h3>
+            <div class="style-row">
+              <label data-i18n="style.bgMode">预设</label>
+              <select id="st-bgMode">
+                <option value="transparent" data-i18n="style.bg.transparent">透明</option>
+                <option value="paper" selected data-i18n="style.bg.paper">白纸</option>
+                <option value="light" data-i18n="style.bg.light">浅灰</option>
+                <option value="dark" data-i18n="style.bg.dark">深灰</option>
+                <option value="custom" data-i18n="style.bg.custom">自定义</option>
+              </select>
+              <input type="color" id="st-bgColor" value="#ffffff" title="自定义背景色">
+            </div>
+          </div>
+
+          <div class="style-group">
+            <h3 data-i18n="style.logo">徽标背景</h3>
+            <div class="style-row">
+              <label data-i18n="style.logoType">图案</label>
+              <select id="st-logoType">
+                <option value="none" data-i18n="style.logo.none" selected>不画</option>
+                <option value="ingress">Ingress</option>
+                <option value="enl">Enlightened</option>
+                <option value="res">Resistance</option>
+              </select>
+            </div>
+            <div class="style-row">
+              <label data-i18n="style.logoSize">大小</label>
+              <input type="number" id="st-logoSize" min="10" max="500" step="1" value="60">
+              <span class="style-hint">% of baseline</span>
+            </div>
+            <div class="style-row">
+              <label data-i18n="style.logoAlpha">透明度</label>
+              <input type="range" id="st-logoAlpha" min="0" max="50" value="12">
+            </div>
+            <div class="style-row">
+              <label data-i18n="style.logoColors">当前徽标色</label>
+              <input type="color" id="st-logoColor" value="#00aeef" title="当前徽标色">
+            </div>
+          </div>
+
+          <div class="style-group">
+            <h3 data-i18n="style.lines">线条</h3>
+            <div class="style-row">
+              <label data-i18n="style.base">基线</label>
+              <input type="number" id="st-baseW" min="0" max="12" step="0.5" value="2.4">
+              <input type="color" id="st-baseC" value="#5b6b85">
+            </div>
+            <div class="style-row">
+              <label data-i18n="style.dataLine">数据边</label>
+              <input type="number" id="st-dataW" min="0" max="12" step="0.5" value="4">
+              <input type="color" id="st-dataC" value="#00aeef">
+              <label class="inline-cb"><input type="checkbox" id="st-dataFollow" checked><span data-i18n="style.follow">跟随阵营</span></label>
+            </div>
+            <div class="style-row">
+              <label data-i18n="style.dataFill">填充</label>
+              <input type="color" id="st-dataFillC" value="#00aeef">
+              <input type="range" id="st-fillAlpha" min="0" max="100" value="30">
+              <label class="inline-cb"><input type="checkbox" id="st-fillFollow" checked><span data-i18n="style.follow">跟随阵营</span></label>
+            </div>
+            <div class="style-row">
+              <label data-i18n="style.spokes">轴线</label>
+              <label class="inline-cb"><input type="checkbox" id="st-spokeShow" checked><span data-i18n="style.show">画</span></label>
+              <input type="number" id="st-spokeW" min="0" max="8" step="0.2" value="1.4">
+              <input type="color" id="st-spokeC" value="#8a94a6">
+            </div>
+            <div class="style-row">
+              <label data-i18n="style.rings">同心环</label>
+              <label class="inline-cb"><input type="checkbox" id="st-ringShow"><span data-i18n="style.show">画</span></label>
+              <input type="number" id="st-ringW" min="0" max="8" step="0.2" value="1">
+              <input type="color" id="st-ringC" value="#8a94a6">
+            </div>
+            <div class="style-row">
+              <label data-i18n="style.ringLabels">环刻度%</label>
+              <label class="inline-cb"><input type="checkbox" id="st-ringLabelShow"><span data-i18n="style.show">画</span></label>
+              <input type="number" id="st-ringLabelSize" min="8" max="40" step="1" value="12">
+              <input type="color" id="st-ringLabelC" value="#5b6b85">
+            </div>
+            <div class="style-row wide">
+              <label data-i18n="style.ringLabelFont">环刻度字体</label>
+              <select id="st-ringLabelFont" class="font-select"></select>
+            </div>
+          </div>
+
+          <div class="style-group">
+            <h3 data-i18n="style.vertex">顶点圆点</h3>
+            <div class="style-row">
+              <label data-i18n="style.radius">半径</label>
+              <input type="number" id="st-vertexR" min="0" max="30" step="1" value="8">
+              <span class="style-hint" data-i18n="style.radiusHint">0 = 不画</span>
+            </div>
+            <div class="style-row">
+              <label data-i18n="style.vertexFill">填充</label>
+              <input type="color" id="st-vertexC" value="#00aeef">
+              <label class="inline-cb"><input type="checkbox" id="st-vertexFollow" checked><span data-i18n="style.follow">跟随阵营</span></label>
+            </div>
+            <div class="style-row">
+              <label data-i18n="style.vertexStroke">描边</label>
+              <input type="number" id="st-vertexSW" min="0" max="8" step="0.5" value="2.5">
+              <input type="color" id="st-vertexSC" value="#ffffff">
+            </div>
+          </div>
+
+          <div class="style-group">
+            <h3 data-i18n="style.text">文字</h3>
+            <div class="style-row wide">
+              <label data-i18n="style.labelFont">轴名字体</label>
+              <select id="st-labelFont">
+                <option value='"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif' selected>系统默认 (Segoe UI / 微软雅黑)</option>
+                <option value="Arial,sans-serif">Arial</option>
+                <option value="Verdana,sans-serif">Verdana</option>
+                <option value="Georgia,serif">Georgia</option>
+                <option value='"Times New Roman",serif'>Times New Roman</option>
+                <option value='"Courier New",monospace'>Courier New</option>
+                <option value="Consolas,monospace">Consolas</option>
+                <option value='"Microsoft YaHei",sans-serif'>微软雅黑</option>
+                <option value="SimSun,serif">宋体</option>
+                <option value="SimHei,sans-serif">黑体</option>
+                <option value="KaiTi,serif">楷体</option>
+                <option value="Impact,sans-serif">Impact</option>
+              </select>
+            </div>
+            <div class="style-row">
+              <label data-i18n="style.labelSize">轴名字号</label>
+              <input type="number" id="st-labelSize" min="8" max="64" step="1" value="27">
+              <input type="color" id="st-labelC" value="#101a2a">
+            </div>
+            <div class="style-row">
+              <label data-i18n="style.labelDist">距六边形</label>
+              <input type="number" id="st-labelDist" min="0" max="240" step="1" value="81">
+            </div>
+            <div class="style-row wide">
+              <label data-i18n="style.titleFont">标题字体</label>
+              <select id="st-titleFont">
+                <option value='"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif' selected>系统默认 (Segoe UI / 微软雅黑)</option>
+                <option value="Arial,sans-serif">Arial</option>
+                <option value="Verdana,sans-serif">Verdana</option>
+                <option value="Georgia,serif">Georgia</option>
+                <option value='"Times New Roman",serif'>Times New Roman</option>
+                <option value='"Courier New",monospace'>Courier New</option>
+                <option value="Consolas,monospace">Consolas</option>
+                <option value='"Microsoft YaHei",sans-serif'>微软雅黑</option>
+                <option value="SimSun,serif">宋体</option>
+                <option value="SimHei,sans-serif">黑体</option>
+                <option value="KaiTi,serif">楷体</option>
+                <option value="Impact,sans-serif">Impact</option>
+              </select>
+            </div>
+            <div class="style-row">
+              <label data-i18n="style.titleSize">标题字号</label>
+              <input type="number" id="st-titleSize" min="8" max="80" step="1" value="36">
+              <input type="color" id="st-titleC" value="#101a2a">
+            </div>
+            <div class="style-row">
+              <label data-i18n="style.vertexValue">顶点数值</label>
+              <label class="inline-cb"><input type="checkbox" id="st-valueShow"><span data-i18n="style.show">写</span></label>
+              <input type="number" id="st-valueSize" min="8" max="40" step="1" value="18">
+              <input type="color" id="st-valueC" value="#556174">
+            </div>
+            <div class="style-row wide">
+              <label data-i18n="style.valueFont">数值字体</label>
+              <select id="st-valueFont" class="font-select"></select>
+            </div>
+            <div class="style-row">
+              <label data-i18n="style.vertexPct">顶点百分比</label>
+              <label class="inline-cb"><input type="checkbox" id="st-pctShow"><span data-i18n="style.show">写</span></label>
+              <input type="number" id="st-pctSize" min="8" max="40" step="1" value="15">
+              <input type="color" id="st-pctC" value="#b71c1c">
+            </div>
+            <div class="style-row">
+              <label data-i18n="style.pctChip">百分比底色</label>
+              <input type="color" id="st-pctChipC" value="#fdecea">
+              <select id="st-pctFont" class="font-select"></select>
+            </div>
+          </div>
+
+        </div>
+      </details>
+    </section>
+
+  </main>
+
+</div>
+
+<script src="logos.js"></script>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

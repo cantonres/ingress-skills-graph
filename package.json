@@ -1,0 +1,12 @@
+{
+  "name": "ingress-skills-graph-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local regression tests for the ingress skills graph HUD redesign.",
+  "scripts": {
+    "test:save-state": "node test-save-state.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.55.0"
+  }
+}
